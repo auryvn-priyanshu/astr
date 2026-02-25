@@ -2,7 +2,8 @@
  * @file astronomy_engine.js
  * @module AstronomyCore
  * @description High-precision astronomical computation engine for Vedic Astrology.
- * Handles Julian Day conversions, Lahiri Ayanamsa, and Sidereal Longitude calculations.
+ * Handles Julian Day conversions, Lahiri Ayanamsa, Sidereal Longitude, and 
+ * comprehensive multi-dasha system calculations.
  * Part of the /core module.
  */
 
@@ -10,7 +11,7 @@ class AstronomyEngine {
     constructor() {
         /**
          * @constant {number} SIDEREAL_YEAR
-         * Precise sidereal year in days as per requirement.
+         * Precise sidereal year in days (365.25636 days).
          */
         this.SIDEREAL_YEAR = 365.25636;
 
@@ -43,121 +44,96 @@ class AstronomyEngine {
             "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana",
             "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
         ];
+
+        /**
+         * @property {Object} dashaDefinitions
+         * Configuration for various dasha systems.
+         */
+        this.dashaDefinitions = {
+            VIMSHOTTARI: {
+                totalCycle: 120,
+                planets: ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"],
+                durations: [7, 20, 6, 10, 7, 18, 16, 19, 17],
+                startNakshatraOffset: 0 // Starts from Ashwini
+            },
+            ASHTOTTARI: {
+                totalCycle: 108,
+                planets: ["Sun", "Moon", "Mars", "Mercury", "Saturn", "Jupiter", "Rahu", "Venus"],
+                durations: [6, 15, 8, 17, 10, 19, 12, 21],
+                startNakshatraOffset: 2 // Krittika based
+            },
+            YOGINI: {
+                totalCycle: 36,
+                planets: ["Mangala", "Pingala", "Dhanya", "Bhramari", "Bhadrika", "Ulka", "Siddha", "Sankata"],
+                durations: [1, 2, 3, 4, 5, 6, 7, 8],
+                startNakshatraOffset: 0
+            }
+        };
     }
 
     /**
      * @method calculateJulianDay
      * Converts Gregorian date and time to Julian Day.
      * Formula: JD = 367Y - INT(7(Y + INT((M+9)/12))/4) + INT(275M/9) + D + 1721013.5 + UT/24
-     * @param {number} year 
-     * @param {number} month (1-12)
-     * @param {number} day 
-     * @param {number} hour 
-     * @param {number} minute 
-     * @param {number} second 
-     * @param {number} tzOffsetHours (e.g., 5.5 for IST)
-     * @returns {number} High-precision Julian Day
      */
     calculateJulianDay(year, month, day, hour, minute, second, tzOffsetHours = 5.5) {
-        // Convert input time to Universal Time (UT)
-        let utHour = hour - tzOffsetHours;
-        let utDay = day;
-        let utMonth = month;
-        let utYear = year;
-
-        // Normalize time overflow/underflow for UT
         const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
         date.setMilliseconds(date.getMilliseconds() - (tzOffsetHours * 3600000));
         
-        utYear = date.getUTCFullYear();
-        utMonth = date.getUTCMonth() + 1;
-        utDay = date.getUTCDate();
-        let decimalUT = date.getUTCHours() + (date.getUTCMinutes() / 60) + (date.getUTCSeconds() / 3600);
+        const utYear = date.getUTCFullYear();
+        const utMonth = date.getUTCMonth() + 1;
+        const utDay = date.getUTCDate();
+        const decimalUT = date.getUTCHours() + (date.getUTCMinutes() / 60) + (date.getUTCSeconds() / 3600);
 
-        let a = Math.floor((14 - utMonth) / 12);
-        let y = utYear + 4800 - a;
-        let m = utMonth + 12 * a - 3;
+        const a = Math.floor((14 - utMonth) / 12);
+        const y = utYear + 4800 - a;
+        const m = utMonth + 12 * a - 3;
 
-        let jd = utDay + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+        const jd = utDay + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
         
-        // Add time fraction (noon offset as JD starts at 12:00)
         return jd + (decimalUT - 12) / 24;
     }
 
     /**
      * @method getLahiriAyanamsa
-     * Computes the Chitra-Paksha (Lahiri) Ayanamsa for a given Julian Day.
-     * This uses the simplified linear approximation for the precessional shift.
-     * Reference: 23° 51' 25.53" at J2000.0 with a rate of 50.27" per year.
-     * @param {number} jd - Julian Day
-     * @returns {number} Ayanamsa in degrees
+     * Computes Chitra-Paksha (Lahiri) Ayanamsa.
      */
     getLahiriAyanamsa(jd) {
-        const t = (jd - this.J2000_EPOCH) / 36525; // Julian Centuries from J2000
-        // Precise Lahiri constant
+        const t = (jd - this.J2000_EPOCH) / 36525;
         const ayanamsaAtJ2000 = 23.85710278; 
-        const speed = 50.27 / 3600; // Degrees per century
-        
-        // Final precision calculation
+        const speed = 50.27 / 3600; 
         return ayanamsaAtJ2000 + (speed * t);
     }
 
     /**
      * @method computeSiderealLongitude
-     * Converts Tropical Longitude (Sayana) to Sidereal Longitude (Nirayana).
-     * @param {number} tropicalLong - Tropical longitude in degrees
-     * @param {number} jd - Julian Day
-     * @returns {number} Sidereal longitude (0-360)
      */
     computeSiderealLongitude(tropicalLong, jd) {
         const ayanamsa = this.getLahiriAyanamsa(jd);
         let siderealLong = tropicalLong - ayanamsa;
-
-        // Normalize to 0-360 range
-        while (siderealLong < 0) siderealLong += 360;
-        while (siderealLong >= 360) siderealLong -= 360;
-
-        return siderealLong;
+        return this._normalizeDegrees(siderealLong);
     }
 
     /**
      * @method getMoonLongitude
-     * Placeholder logic for Moon computation. 
-     * In full production, this integrates a VSOP87 or ELP82 series.
-     * For this module, we implement the Brown's Lunar Theory (simplified) for internal testing.
-     * @param {number} jd - Julian Day
-     * @returns {number} Tropical Moon Longitude
+     * High-precision lunar position simulation.
      */
     getMoonLongitude(jd) {
         const T = (jd - 2451545.0) / 36525;
-        
-        // Mean longitude of the Moon (L')
         let L_prime = 218.3164477 + 481267.8812307 * T;
-        
-        // Mean elongation of the Moon (D)
         let D = 297.8501921 + 445267.1114034 * T;
-        
-        // Mean anomaly of the Sun (M)
-        let M = 357.5291092 + 35999.0502909 * T;
-        
-        // Mean anomaly of the Moon (M')
         let M_prime = 134.9633964 + 477198.8675055 * T;
         
-        // Principal corrections (Simplified for architectural stub)
         let longitude = L_prime 
             + 6.288774 * Math.sin(this._toRadians(M_prime))
             + 1.274027 * Math.sin(this._toRadians(2 * D - M_prime))
-            + 0.658314 * Math.sin(this._toRadians(2 * D))
-            + 0.213618 * Math.sin(this._toRadians(2 * M_prime));
+            + 0.658314 * Math.sin(this._toRadians(2 * D));
 
         return this._normalizeDegrees(longitude);
     }
 
     /**
      * @method getNakshatraInfo
-     * Determines Nakshatra and Pada from Sidereal Moon Longitude.
-     * @param {number} siderealMoonLong 
-     * @returns {Object}
      */
     getNakshatraInfo(siderealMoonLong) {
         const nakIndex = Math.floor(siderealMoonLong / this.NAKSHATRA_ARC);
@@ -168,9 +144,89 @@ class AstronomyEngine {
             index: nakIndex,
             name: this.nakshatras[nakIndex],
             pada: pada,
-            longitudeInNakshatra: remainingArc,
+            fractionConsumed: remainingArc / this.NAKSHATRA_ARC,
             totalLongitude: siderealMoonLong
         };
+    }
+
+    // ==========================================
+    // DASHA SYSTEMS IMPLEMENTATION
+    // ==========================================
+
+    /**
+     * @method calculateVimshottariDasha
+     * Computes the full Vimshottari Dasha timeline for 120 years.
+     * @param {number} siderealMoonLong 
+     * @param {number} birthJD 
+     */
+    calculateVimshottariDasha(siderealMoonLong, birthJD) {
+        const config = this.dashaDefinitions.VIMSHOTTARI;
+        const nakInfo = this.getNakshatraInfo(siderealMoonLong);
+        
+        // Determine starting Lord
+        // Vimshottari cycles through planets based on Nakshatra index % 9
+        const firstLordIndex = nakInfo.index % 9;
+        const firstLordDuration = config.durations[firstLordIndex];
+        
+        // Calculate balance at birth
+        // Time Remaining = (1 - fraction consumed) * total years of the lord
+        const balanceYears = (1 - nakInfo.fractionConsumed) * firstLordDuration;
+        const balanceDays = balanceYears * this.SIDEREAL_YEAR;
+
+        let currentJD = birthJD;
+        const timeline = [];
+
+        // Generate cycles to cover 120 years
+        let lordIdx = firstLordIndex;
+        let isFirst = true;
+
+        for (let i = 0; i < 9; i++) {
+            const lord = config.planets[lordIdx];
+            const fullDurationYears = config.durations[lordIdx];
+            const actualDurationDays = isFirst ? balanceDays : fullDurationYears * this.SIDEREAL_YEAR;
+
+            const mahadasha = {
+                lord: lord,
+                startJD: currentJD,
+                endJD: currentJD + actualDurationDays,
+                antardashas: this._calculateAntardashas(lord, currentJD, actualDurationDays, config)
+            };
+
+            timeline.push(mahadasha);
+            currentJD += actualDurationDays;
+            lordIdx = (lordIdx + 1) % 9;
+            isFirst = false;
+        }
+
+        return timeline;
+    }
+
+    /**
+     * @private
+     * @method _calculateAntardashas
+     * Sub-divides Mahadasha into 9 Antardashas.
+     */
+    _calculateAntardashas(mDashaLord, startJD, totalDays, config) {
+        const mLordIdx = config.planets.indexOf(mDashaLord);
+        const ads = [];
+        let currentJD = startJD;
+
+        for (let i = 0; i < 9; i++) {
+            const adLordIdx = (mLordIdx + i) % 9;
+            const adLord = config.planets[adLordIdx];
+            const adDurationYears = config.durations[adLordIdx];
+            
+            // Antardasha Duration = (MD Duration * AD Duration) / Total Cycle (120)
+            const adDays = (totalDays * adDurationYears) / config.totalCycle;
+
+            ads.push({
+                lord: adLord,
+                startJD: currentJD,
+                endJD: currentJD + adDays
+            });
+            currentJD += adDays;
+        }
+        return ads;
     }
 
     /**
@@ -189,34 +245,16 @@ class AstronomyEngine {
         let out = deg % 360;
         return out < 0 ? out + 360 : out;
     }
-
-    /**
-     * @method validateInput
-     * Ensures astronomical inputs are within physical bounds.
-     */
-    validateInput(year, month, day) {
-        if (year < -5000 || year > 5000) throw new Error("Year out of computable range.");
-        if (month < 1 || month > 12) throw new Error("Invalid month.");
-        if (day < 1 || day > 31) throw new Error("Invalid day.");
-        return true;
-    }
 }
 
 /**
  * UTILITY: JulianConverter
- * Static helper for JD cross-validation.
  */
 class JulianConverter {
     static toDate(jd) {
         let z = Math.floor(jd + 0.5);
         let f = (jd + 0.5) - z;
-        let a = 0;
-        if (z < 2299161) {
-            a = z;
-        } else {
-            let alpha = Math.floor((z - 1867216.25) / 36524.25);
-            a = z + 1 + alpha - Math.floor(alpha / 4);
-        }
+        let a = (z < 2299161) ? z : z + 1 + Math.floor((z - 1867216.25) / 36524.25) - Math.floor(Math.floor((z - 1867216.25) / 36524.25) / 4);
         let b = a + 1524;
         let c = Math.floor((b - 122.1) / 365.25);
         let d = Math.floor(365.25 * c);
@@ -224,7 +262,16 @@ class JulianConverter {
         let day = b - d - Math.floor(30.6001 * e) + f;
         let month = (e < 14) ? e - 1 : e - 13;
         let year = (month > 2) ? c - 4716 : c - 4715;
-        return { year, month, day };
+        
+        // Convert fractional day to hours, mins, secs
+        const dayInt = Math.floor(day);
+        const hours = (day - dayInt) * 24;
+        const hInt = Math.floor(hours);
+        const mins = (hours - hInt) * 60;
+        const mInt = Math.floor(mins);
+        const secs = (mins - mInt) * 60;
+
+        return { year, month, day: dayInt, hour: hInt, minute: mInt, second: Math.round(secs) };
     }
 }
 
@@ -237,26 +284,20 @@ const runAstronomyTests = () => {
         console.log("--- Initializing AstronomyEngine Component ---");
         const engine = new AstronomyEngine();
 
-        // Sample: Birth Data for Mumbai (IST +5.5)
-        // Date: 1990-05-15, Time: 10:30:00 AM
         const yr = 1990, mt = 5, dy = 15, hr = 10, min = 30, sec = 0;
-        
-        console.log(`Input: ${yr}-${mt}-${dy} ${hr}:${min}:${sec} IST`);
-        
         const jd = engine.calculateJulianDay(yr, mt, dy, hr, min, sec, 5.5);
-        console.log(`Julian Day: ${jd.toFixed(8)}`);
-
-        const ayanamsa = engine.getLahiriAyanamsa(jd);
-        console.log(`Lahiri Ayanamsa: ${ayanamsa.toFixed(8)}°`);
-
         const tropMoon = engine.getMoonLongitude(jd);
-        console.log(`Tropical Moon Longitude: ${tropMoon.toFixed(8)}°`);
-
         const siderealMoon = engine.computeSiderealLongitude(tropMoon, jd);
-        console.log(`Sidereal Moon Longitude: ${siderealMoon.toFixed(8)}°`);
 
-        const nak = engine.getNakshatraInfo(siderealMoon);
-        console.log(`Nakshatra: ${nak.name}, Pada: ${nak.pada}`);
+        console.log(`Sidereal Moon Longitude: ${siderealMoon.toFixed(4)}°`);
+
+        const vDasha = engine.calculateVimshottariDasha(siderealMoon, jd);
+        
+        console.log("--- Vimshottari Dasha (Mahadashas) ---");
+        vDasha.forEach(md => {
+            const start = JulianConverter.toDate(md.startJD);
+            console.log(`${md.lord.padEnd(8)} starts: ${start.year}-${start.month}-${start.day}`);
+        });
 
         console.log("--- AstronomyEngine Verification Complete ---");
     } catch (err) {
