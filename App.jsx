@@ -7,7 +7,8 @@ import {
   Navigation, Map, SearchCode, Waves,
   BarChart3, Zap, MapPin, LayoutGrid,
   Clock3, ShieldCheck, Heart, Flame,
-  Dna, Award, ZapOff, Fingerprint
+  Dna, Award, ZapOff, Fingerprint,
+  Timeline, History, Timer, Zap as Bolt
 } from 'lucide-react';
 
 // --- GeoEngine Implementation ---
@@ -62,6 +63,57 @@ const GlassCard = ({ children, className = "", glow = false }) => (
   </div>
 );
 
+const DashaTimeline = () => {
+  const dashas = [
+    { planet: 'Jupiter', end: '2028', progress: 85, color: 'bg-amber-500' },
+    { planet: 'Saturn', end: '2047', progress: 0, color: 'bg-indigo-500' },
+    { planet: 'Mercury', end: '2064', progress: 0, color: 'bg-emerald-500' }
+  ];
+
+  return (
+    <div className="space-y-4">
+      {dashas.map((d, i) => (
+        <div key={i} className="relative pl-6 border-l-2 border-white/5 pb-4 last:pb-0">
+          <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full ${d.progress > 0 ? d.color : 'bg-slate-800'} border-4 border-[#0c121e] shadow-lg`} />
+          <div className="flex justify-between items-start mb-1.5">
+            <div>
+              <h5 className="text-[10px] font-black text-white uppercase tracking-tight">{d.planet} Mahadasha</h5>
+              <p className="text-[9px] font-bold text-slate-500">Until {d.end}</p>
+            </div>
+            {d.progress > 0 && <span className="text-[8px] font-black text-amber-500 animate-pulse">ACTIVE</span>}
+          </div>
+          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${d.color} transition-all duration-1000`} 
+              style={{ width: `${d.progress}%` }} 
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const BioResonance = () => {
+  const bio = [
+    { label: 'Physical', value: 78, icon: <Bolt size={10} />, color: 'text-orange-400' },
+    { label: 'Emotional', value: 42, icon: <Heart size={10} />, color: 'text-pink-400' },
+    { label: 'Intellectual', value: 91, icon: <Brain size={10} />, color: 'text-blue-400' }
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {bio.map((b, i) => (
+        <div key={i} className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5">
+          <div className={`${b.color} mb-2 bg-white/5 p-2 rounded-lg`}>{b.icon}</div>
+          <div className="text-[14px] font-black text-white">{b.value}%</div>
+          <div className="text-[8px] font-bold text-slate-500 uppercase">{b.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const KundliChart = ({ houseData }) => {
   const houses = houseData || [
     { id: 1, planets: ['ASC', 'JU'] }, { id: 2, planets: [] }, { id: 3, planets: ['MA'] },
@@ -95,117 +147,11 @@ const KundliChart = ({ houseData }) => {
   );
 };
 
-const GunMilanRadar = () => {
-  const metrics = [
-    { label: 'Varna', score: 1, max: 1 },
-    { label: 'Vashya', score: 2, max: 2 },
-    { label: 'Tara', score: 1.5, max: 3 },
-    { label: 'Yoni', score: 3, max: 4 },
-    { label: 'Graha', score: 4, max: 5 },
-    { label: 'Gana', score: 6, max: 6 },
-    { label: 'Bhakoot', score: 0, max: 7 },
-    { label: 'Nadi', score: 8, max: 8 },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-end">
-        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ashta-Koot Analysis</h4>
-        <div className="text-right">
-          <p className="text-[8px] font-bold text-slate-500 uppercase">Total Score</p>
-          <p className="text-xl font-black text-pink-500">25.5/36</p>
-        </div>
-      </div>
-      <div className="space-y-2">
-        {metrics.map((m, i) => (
-          <div key={i} className="group">
-            <div className="flex justify-between text-[9px] font-bold mb-1">
-              <span className="text-slate-400">{m.label}</span>
-              <span className={m.score === 0 ? "text-red-400" : "text-white"}>{m.score}/{m.max}</span>
-            </div>
-            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-1000 ${m.score === 0 ? 'bg-red-500' : 'bg-pink-500'}`} 
-                style={{ width: `${(m.score / m.max) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const RitualModule = () => {
-  const rituals = [
-    { title: "Surya Arghya", category: "Vitality", duration: "5m", intensity: "High" },
-    { title: "Chandra Meditation", category: "Mental", duration: "15m", intensity: "Low" }
-  ];
-
-  return (
-    <div className="space-y-3">
-      {rituals.map((r, i) => (
-        <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all cursor-pointer group">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded uppercase">{r.category}</span>
-            <Clock size={12} className="text-slate-600" />
-          </div>
-          <h5 className="text-xs font-bold text-white group-hover:text-amber-400">{r.title}</h5>
-          <div className="flex gap-3 mt-2">
-            <span className="text-[9px] text-slate-500 font-bold">{r.duration}</span>
-            <span className="text-[9px] text-slate-500 font-bold">•</span>
-            <span className="text-[9px] text-slate-500 font-bold">{r.intensity} Focus</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const WeeklyForecast = () => {
-  const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-  const metrics = [
-    { label: 'Intellect', val: [80, 75, 90, 85, 60, 45, 70], color: 'bg-blue-500' },
-    { label: 'Vitality', val: [60, 65, 55, 70, 85, 95, 80], color: 'bg-emerald-500' },
-    { label: 'Harmony', val: [40, 50, 60, 55, 50, 40, 45], color: 'bg-pink-500' }
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Temporal Trends</h4>
-        <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Cycle: Waxing</span>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-[8px] font-black text-slate-600 text-center mb-1">
-        {days.map(d => <div key={d}>{d}</div>)}
-      </div>
-      <div className="space-y-3">
-        {metrics.map((m, idx) => (
-          <div key={idx} className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <span className="text-[9px] font-bold text-slate-300 uppercase">{m.label}</span>
-            </div>
-            <div className="flex items-end gap-1 h-8">
-              {m.val.map((v, i) => (
-                <div 
-                  key={i} 
-                  className={`flex-1 ${m.color} rounded-t-sm opacity-60 hover:opacity-100 transition-opacity`} 
-                  style={{ height: `${v}%` }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 export default function App() {
   const [selectedCity, setSelectedCity] = useState(null);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [aiResponse, setAiResponse] = useState("Veda Engine Standby. Select location for geodetic sync...");
+  const [aiResponse, setAiResponse] = useState("Veda Engine Ready. Select geo-coordinates for dasha sync...");
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState("");
 
@@ -219,14 +165,14 @@ export default function App() {
     setSelectedCity(city);
     setQuery("");
     setSearchResults([]);
-    triggerAi(`Analyze current transits for ${city.name} (Lat: ${city.lat}). Focus on compatibility potentials and remedial rituals for the current Moon phase.`, city);
+    triggerAi(`Provide a summary of the current Mahadasha effects for ${city.name} transit. Correlate bio-resonance peaks with Nakshatra transits.`, city);
   };
 
   const triggerAi = async (prompt, city = selectedCity) => {
     if (!prompt) return;
     setLoading(true);
     const apiKey = "";
-    const systemPrompt = `You are Veda.Intel. Expertise: Ashta-Koot compatibility, Remedial Rituals, and Bhava analysis. Be precise, mystical, and data-driven. Reference location: ${city?.name || 'Unknown'}.`;
+    const systemPrompt = `You are Veda.Intel. Expertise: Vimshottari Dasha, Biorhythms, and Geodetic Transits. Be professional, clinical, yet Vedic in essence. Current Observation: ${city?.name || 'Global'}.`;
 
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
@@ -238,9 +184,9 @@ export default function App() {
         })
       });
       const data = await res.json();
-      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "Signal interrupted.");
+      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "Celestial communication link unstable.");
     } catch {
-      setAiResponse("Connection to celestial grid failed.");
+      setAiResponse("Signal dropped by planetary interference.");
     } finally {
       setLoading(false);
       setInput("");
@@ -248,29 +194,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#04070b] text-slate-300 p-4 md:p-6 lg:p-8 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#04070b] text-slate-300 p-4 md:p-6 lg:p-8 font-sans">
       <div className="max-w-[1700px] mx-auto space-y-8">
         
-        {/* Header Section */}
-        <header className="flex flex-col xl:flex-row items-center gap-8 bg-white/[0.02] border border-white/5 p-6 md:p-8 rounded-[3rem] backdrop-blur-3xl">
+        {/* Navigation Bar */}
+        <header className="flex flex-col xl:flex-row items-center gap-8 bg-white/[0.02] border border-white/5 p-6 rounded-[3rem] backdrop-blur-3xl">
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-2xl ring-4 ring-blue-500/10">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-2xl">
               <Orbit size={28} className="text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-white tracking-tighter leading-none">VEDA<span className="text-blue-500">.INTEL</span></h1>
-              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Planetary Intelligence v2.5</p>
+              <h1 className="text-3xl font-black text-white tracking-tighter leading-none">VEDA<span className="text-indigo-500">.INTEL</span></h1>
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-1">Dasha Chronology Engine</p>
             </div>
           </div>
 
           <div className="flex-1 w-full max-w-xl relative">
             <div className="relative">
-              <SearchCode className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-500/50" size={20} />
+              <SearchCode className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-500/50" size={20} />
               <input 
                 value={query}
                 onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Enter Observation City..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-500/40 transition-all font-medium"
+                placeholder="Target Geocode (e.g., Delhi, Pune)..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm focus:outline-none focus:border-indigo-500/40"
               />
             </div>
             {searchResults.length > 0 && (
@@ -279,13 +225,13 @@ export default function App() {
                   <button 
                     key={i}
                     onClick={() => selectCity(city)}
-                    className="w-full px-6 py-4 text-left hover:bg-blue-600/20 border-b border-white/5 flex justify-between items-center group"
+                    className="w-full px-6 py-4 text-left hover:bg-indigo-600/20 border-b border-white/5 flex justify-between items-center group"
                   >
                     <div>
                       <p className="text-xs font-black text-white uppercase">{city.name}</p>
                       <p className="text-[9px] text-slate-500 font-bold uppercase">{city.state}</p>
                     </div>
-                    <ChevronRight size={14} className="text-slate-700 group-hover:text-blue-500" />
+                    <ChevronRight size={14} className="text-slate-700 group-hover:text-indigo-500" />
                   </button>
                 ))}
               </div>
@@ -293,70 +239,52 @@ export default function App() {
           </div>
 
           <div className="flex gap-4">
-            <div className="px-5 py-3 bg-white/5 rounded-2xl border border-white/10 flex flex-col items-center">
-              <span className="text-[9px] font-black text-slate-500 uppercase">Observer</span>
-              <span className="text-xs font-bold text-white uppercase">{selectedCity?.name || '---'}</span>
+            <div className="px-5 py-3 bg-white/5 rounded-2xl border border-white/10 text-center">
+              <span className="text-[9px] font-black text-slate-500 uppercase block">Local Tithi</span>
+              <span className="text-xs font-bold text-white uppercase">Navami</span>
             </div>
-            <div className="px-5 py-3 bg-blue-600/10 rounded-2xl border border-blue-500/20 flex flex-col items-center">
-              <span className="text-[9px] font-black text-blue-400 uppercase">System</span>
-              <span className="text-xs font-bold text-emerald-400 uppercase">Active</span>
+            <div className="px-5 py-3 bg-indigo-600/10 rounded-2xl border border-indigo-500/20 text-center">
+              <span className="text-[9px] font-black text-indigo-400 uppercase block">Phase</span>
+              <span className="text-xs font-bold text-indigo-200 uppercase">Synchronized</span>
             </div>
           </div>
         </header>
 
-        {/* Dashboard Grid */}
+        {/* Main Interface Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           
-          {/* Column 1: Core Astro Graphics */}
+          {/* Column 1: Time & Bio State */}
           <div className="lg:col-span-3 space-y-6">
             <GlassCard className="p-6">
               <div className="flex items-center gap-3 mb-6">
-                <LayoutGrid size={18} className="text-blue-500" />
-                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Kundli Matrix</h3>
+                <Timer size={18} className="text-indigo-500" />
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Vimshottari Dasha</h3>
               </div>
-              <KundliChart />
+              <DashaTimeline />
             </GlassCard>
 
             <GlassCard className="p-6">
               <div className="flex items-center gap-3 mb-6">
-                <Heart size={18} className="text-pink-500" />
-                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Gun Milan</h3>
+                <Activity size={18} className="text-pink-500" />
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Bio-Resonance</h3>
               </div>
-              <GunMilanRadar />
+              <BioResonance />
             </GlassCard>
           </div>
 
-          {/* Column 2: Intelligence & Real-time Processing */}
+          {/* Column 2: Cognitive Processor */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <GlassCard className="p-6" glow>
-                <div className="flex items-center gap-3 mb-6">
-                  <TrendingUp size={18} className="text-indigo-500" />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Temporal Trends</h3>
-                </div>
-                <WeeklyForecast />
-              </GlassCard>
-
-              <GlassCard className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <Flame size={18} className="text-amber-500" />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Ritual Engine</h3>
-                </div>
-                <RitualModule />
-              </GlassCard>
-            </div>
-
-            <GlassCard className="min-h-[400px] flex flex-col bg-[#0f172a]/90">
-              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
+            <GlassCard className="min-h-[500px] flex flex-col bg-[#0f172a]/95">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/30">
                 <div className="flex items-center gap-3">
-                  <Fingerprint size={20} className="text-blue-500" />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Intelligence Output</h3>
+                  <Fingerprint size={20} className="text-indigo-500" />
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Neural Transit Analysis</h3>
                 </div>
-                {loading && <Loader2 className="animate-spin text-blue-500" size={18} />}
+                {loading && <Loader2 className="animate-spin text-indigo-500" size={18} />}
               </div>
-              <div className="flex-1 p-6 overflow-y-auto max-h-[400px] custom-scrollbar">
-                <div className="prose prose-invert prose-sm">
-                  <p className="text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">
+              <div className="flex-1 p-8 overflow-y-auto max-h-[500px] custom-scrollbar">
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <p className="text-slate-300 leading-relaxed font-medium whitespace-pre-wrap selection:bg-indigo-500/40">
                     {aiResponse}
                   </p>
                 </div>
@@ -367,56 +295,42 @@ export default function App() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && triggerAi(input)}
-                    placeholder="Ask about relationship sync or ritual effectiveness..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-5 pr-14 text-xs focus:outline-none focus:border-blue-500 transition-all"
+                    placeholder="Inquire about Mahadasha transitions or lunar peaks..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-5 pl-6 pr-16 text-xs focus:outline-none focus:border-indigo-500 transition-all font-medium"
                   />
                   <button 
                     onClick={() => triggerAi(input)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors shadow-lg"
                   >
-                    <Send size={14} />
+                    <Send size={16} />
                   </button>
                 </div>
               </div>
             </GlassCard>
           </div>
 
-          {/* Column 3: Telemetry & State */}
+          {/* Column 3: Telemetry & Spatial Mapping */}
           <div className="lg:col-span-3 space-y-6">
             <GlassCard className="p-6">
               <div className="flex items-center gap-3 mb-6">
-                <Clock3 size={18} className="text-emerald-500" />
-                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Panchang Telemetry</h3>
+                <LayoutGrid size={18} className="text-indigo-500" />
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-white">Celestial Matrix</h3>
               </div>
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { l: 'Tithi', v: 'Shukla Navami', status: 'Stable' },
-                  { l: 'Nakshatra', v: 'Rohini', status: 'Exalted' },
-                  { l: 'Yoga', v: 'Sadhya', status: 'Neutral' },
-                  { l: 'Karan', v: 'Bava', status: 'Active' }
-                ].map((p, i) => (
-                  <div key={i} className="bg-white/5 p-3 rounded-xl border border-white/5 flex justify-between items-center">
-                    <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase">{p.l}</p>
-                      <p className="text-xs font-bold text-white">{p.v}</p>
-                    </div>
-                    <span className="text-[7px] font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded uppercase">
-                      {p.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <KundliChart />
             </GlassCard>
 
-            <div className="p-8 bg-gradient-to-br from-pink-600/20 to-indigo-600/30 border border-pink-500/20 rounded-[2.5rem] relative group overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                <Dna size={60} className="text-white" />
+            <div className="p-8 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-white/10 rounded-[2.5rem] relative overflow-hidden group">
+              <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-125 transition-transform duration-1000">
+                <Star size={120} className="text-white" />
               </div>
-              <p className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-2">Sync Note</p>
-              <h4 className="text-2xl font-black text-white tracking-tighter leading-tight">Gana <br/> Mismatch?</h4>
-              <p className="text-[10px] font-bold text-slate-400 mt-4 leading-relaxed uppercase">
-                Correct with <span className="text-white">White Sandal</span> meditation during twilight.
-              </p>
+              <div className="relative z-10">
+                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Sade Sati Alert</span>
+                <h4 className="text-2xl font-black text-white mt-1 leading-tight">Shani <br/> Transiting 12th</h4>
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Impact Level: Moderate</span>
+                </div>
+              </div>
             </div>
           </div>
 
