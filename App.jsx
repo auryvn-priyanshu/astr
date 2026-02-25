@@ -1,8 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Sun, Moon, Star, Clock, Calendar, Shield, Activity, 
   ChevronRight, ChevronDown, Info, Settings, MapPin, Search
 } from 'lucide-react';
+
+// --- Geo Engine Logic (Inlined to prevent resolution errors) ---
+class GeoEngine {
+  constructor() {
+    this.cities = [
+      { name: "Delhi", latitude: 28.6139, longitude: 77.2090 },
+      { name: "Mumbai", latitude: 19.0760, longitude: 72.8777 },
+      { name: "New York", latitude: 40.7128, longitude: -74.0060 },
+      { name: "London", latitude: 51.5074, longitude: -0.1278 },
+      { name: "Bangalore", latitude: 12.9716, longitude: 77.5946 },
+      { name: "Tokyo", latitude: 35.6762, longitude: 139.6503 }
+    ];
+  }
+  findCity(query) {
+    if (!query) return null;
+    return this.cities.find(c => c.name.toLowerCase().includes(query.toLowerCase()));
+  }
+}
 
 // --- Astronomy Engine Integration ---
 class AstronomyEngine {
@@ -17,8 +35,7 @@ class AstronomyEngine {
   }
 
   normalize(deg) { let out = deg % 360; return out < 0 ? out + 360 : out; }
-  getAyanamsa(jd) { return 23.85 + (50.27 / 3600 * ((jd - this.J2000_EPOCH) / 36525)); }
-
+  
   calculatePanchang(sunLong, moonLong, jd) {
     const diff = this.normalize(moonLong - sunLong);
     const tithi = Math.floor(diff / 12) + 1;
@@ -61,12 +78,12 @@ class AstronomyEngine {
 }
 
 const engine = new AstronomyEngine();
+const geo = new GeoEngine();
 
 // --- Skeuomorphic Styled Components ---
 
 const GlassCard = ({ children, className = "" }) => (
   <div className={`relative overflow-hidden rounded-[2rem] border border-white/20 bg-white/5 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] transition-all duration-500 hover:bg-white/10 ${className}`}>
-    {/* Refraction highlight */}
     <div className="absolute -top-[100px] -left-[100px] w-[200px] h-[200px] bg-white/10 blur-[80px] pointer-events-none" />
     <div className="relative z-10">{children}</div>
   </div>
@@ -129,13 +146,28 @@ export default function App() {
     time: '12:00',
     lat: 28.6139,
     lng: 77.2090,
+    city: 'Delhi',
     name: 'Karan Sharma'
   });
 
+  const [cityQuery, setCityQuery] = useState('Delhi');
   const [activeTab, setActiveTab] = useState('chart');
 
+  const handleCitySearch = (e) => {
+    const query = e.target.value;
+    setCityQuery(query);
+    const result = geo.findCity(query);
+    if (result) {
+      setBirthData(prev => ({
+        ...prev,
+        city: result.name,
+        lat: result.latitude,
+        lng: result.longitude
+      }));
+    }
+  };
+
   const computedData = useMemo(() => {
-    // Standard mock JD and coordinates for demo clarity
     const jd = 2447893.0; 
     const sunLong = 255.5; 
     const moonLong = 320.2;
@@ -154,7 +186,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050810] text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
-      {/* Dynamic Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
@@ -178,7 +209,7 @@ export default function App() {
           <div className="hidden md:flex items-center gap-6">
              <div className="flex flex-col items-end">
                 <span className="text-xs font-bold text-slate-500 uppercase">Observer Location</span>
-                <span className="text-sm font-mono text-slate-300 flex items-center gap-1"><MapPin size={12}/> {birthData.lat}, {birthData.lng}</span>
+                <span className="text-sm font-mono text-slate-300 flex items-center gap-1"><MapPin size={12}/> {birthData.city} ({birthData.lat}, {birthData.lng})</span>
              </div>
              <SkeuoButton className="p-2 aspect-square !rounded-full !px-2">
                 <Settings size={20} />
@@ -188,8 +219,6 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-        
-        {/* Input Sidebar */}
         <aside className="lg:col-span-3 space-y-8">
           <GlassCard className="p-6">
             <h2 className="text-xs font-black uppercase tracking-[0.15em] text-blue-500 mb-6 flex items-center gap-2">
@@ -205,6 +234,21 @@ export default function App() {
                   className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" 
                 />
               </div>
+
+              <div className="group relative">
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1.5 block ml-1">Birth City</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                  <input 
+                    type="text" 
+                    value={cityQuery}
+                    onChange={handleCitySearch}
+                    placeholder="Search city..."
+                    className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" 
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase mb-1.5 block ml-1">Event Date</label>
@@ -254,9 +298,7 @@ export default function App() {
           </GlassCard>
         </aside>
 
-        {/* Content Area */}
         <div className="lg:col-span-9 space-y-8">
-          
           <div className="flex gap-4 p-1.5 bg-black/40 rounded-3xl border border-white/5 w-fit">
             {[
               { id: 'chart', label: 'Ecliptic Chart', icon: <Shield size={16}/> },
@@ -344,9 +386,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
-                  {/* Decorative glass line */}
                   <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-blue-500/20 to-transparent hidden md:block"></div>
-                  
                   {computedData.dasha.map((d, i) => (
                     <div key={i} className={`group relative p-6 rounded-[2rem] border border-white/5 bg-gradient-to-br from-white/5 to-transparent hover:to-blue-500/10 transition-all duration-500 cursor-pointer ${i % 2 === 0 ? 'md:mr-2' : 'md:ml-2'}`}>
                       <div className="flex items-start justify-between">
@@ -364,7 +404,6 @@ export default function App() {
                           <p className="text-[10px] font-bold text-slate-500 uppercase">{d.duration} yrs</p>
                         </div>
                       </div>
-                      {/* Glass Reflection effect on hover */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem] pointer-events-none" />
                     </div>
                   ))}
@@ -383,18 +422,15 @@ export default function App() {
                     const val = 70 + Math.random() * 25; 
                     return (
                       <div key={idx} className="relative p-6 rounded-[2.5rem] bg-black/40 border border-white/5 shadow-inner group overflow-hidden">
-                        {/* Liquid Background Fill */}
                         <div 
                           className="absolute bottom-0 left-0 right-0 bg-blue-600/10 transition-all duration-[2000ms] ease-out" 
                           style={{ height: `${(val / 120) * 100}%` }}
                         />
-                        
                         <div className="relative z-10">
                           <div className="flex justify-between items-center mb-6">
                             <span className="text-sm font-black text-white uppercase tracking-tighter">{p}</span>
                             <span className="text-xs font-mono text-blue-400 bg-blue-400/10 px-2 py-1 rounded-lg">{(val/10).toFixed(1)} Rupas</span>
                           </div>
-                          
                           <div className="space-y-4">
                             {[
                               { l: 'Positional', v: val * 0.4 },
