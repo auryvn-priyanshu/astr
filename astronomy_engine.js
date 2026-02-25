@@ -3,7 +3,7 @@
  * @module AstronomyCore
  * @description High-precision astronomical computation engine for Vedic Astrology.
  * Handles Julian Day conversions, Lahiri Ayanamsa, Sidereal Longitude, and 
- * comprehensive multi-dasha system calculations.
+ * comprehensive multi-dasha system calculations including conditional dashas.
  * Part of the /core module.
  */
 
@@ -47,26 +47,44 @@ class AstronomyEngine {
 
         /**
          * @property {Object} dashaDefinitions
-         * Configuration for various dasha systems.
+         * Configuration for various dasha systems with their respective cycles and lord sequences.
          */
         this.dashaDefinitions = {
             VIMSHOTTARI: {
                 totalCycle: 120,
                 planets: ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"],
                 durations: [7, 20, 6, 10, 7, 18, 16, 19, 17],
-                startNakshatraOffset: 0 // Starts from Ashwini
+                startNakshatraOffset: 0 // Ashwini
             },
             ASHTOTTARI: {
                 totalCycle: 108,
                 planets: ["Sun", "Moon", "Mars", "Mercury", "Saturn", "Jupiter", "Rahu", "Venus"],
                 durations: [6, 15, 8, 17, 10, 19, 12, 21],
-                startNakshatraOffset: 2 // Krittika based
+                startNakshatraOffset: 2 // Krittika (Ardra/Punarvasu/Pushya variations exist)
             },
             YOGINI: {
                 totalCycle: 36,
-                planets: ["Mangala", "Pingala", "Dhanya", "Bhramari", "Bhadrika", "Ulka", "Siddha", "Sankata"],
+                planets: ["Mangala (Sun)", "Pingala (Moon)", "Dhanya (Jupiter)", "Bhramari (Mars)", "Bhadrika (Mercury)", "Ulka (Saturn)", "Siddha (Venus)", "Sankata (Rahu)"],
                 durations: [1, 2, 3, 4, 5, 6, 7, 8],
                 startNakshatraOffset: 0
+            },
+            SHODASHOTTARI: {
+                totalCycle: 116,
+                planets: ["Sun", "Mars", "Jupiter", "Saturn", "Ketu", "Moon", "Mercury", "Venus"],
+                durations: [11, 12, 13, 14, 15, 16, 17, 18],
+                startNakshatraOffset: 11 // Pushya
+            },
+            DWISAPTATI: {
+                totalCycle: 72,
+                planets: ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"],
+                durations: [9, 9, 9, 9, 9, 9, 9, 9],
+                startNakshatraOffset: 7 // Mula
+            },
+            PANCHOTTARI: {
+                totalCycle: 105,
+                planets: ["Sun", "Mercury", "Saturn", "Mars", "Venus", "Jupiter", "Rahu"],
+                durations: [12, 13, 14, 15, 16, 17, 18],
+                startNakshatraOffset: 12 // Anuradha
             }
         };
     }
@@ -74,7 +92,6 @@ class AstronomyEngine {
     /**
      * @method calculateJulianDay
      * Converts Gregorian date and time to Julian Day.
-     * Formula: JD = 367Y - INT(7(Y + INT((M+9)/12))/4) + INT(275M/9) + D + 1721013.5 + UT/24
      */
     calculateJulianDay(year, month, day, hour, minute, second, tzOffsetHours = 5.5) {
         const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
@@ -96,7 +113,7 @@ class AstronomyEngine {
 
     /**
      * @method getLahiriAyanamsa
-     * Computes Chitra-Paksha (Lahiri) Ayanamsa.
+     * Computes Chitra-Paksha (Lahiri) Ayanamsa for a specific Julian Day.
      */
     getLahiriAyanamsa(jd) {
         const t = (jd - this.J2000_EPOCH) / 36525;
@@ -150,37 +167,40 @@ class AstronomyEngine {
     }
 
     // ==========================================
-    // DASHA SYSTEMS IMPLEMENTATION
+    // MULTI-DASHA SYSTEMS IMPLEMENTATION
     // ==========================================
 
     /**
-     * @method calculateVimshottariDasha
-     * Computes the full Vimshottari Dasha timeline for 120 years.
+     * @method calculateDashaTimeline
+     * Generic dasha engine that supports multiple systems based on definition keys.
+     * @param {string} systemKey - VIMSHOTTARI, ASHTOTTARI, YOGINI, etc.
      * @param {number} siderealMoonLong 
      * @param {number} birthJD 
+     * @param {number} projectionYears - default 120
      */
-    calculateVimshottariDasha(siderealMoonLong, birthJD) {
-        const config = this.dashaDefinitions.VIMSHOTTARI;
+    calculateDashaTimeline(systemKey, siderealMoonLong, birthJD, projectionYears = 120) {
+        const config = this.dashaDefinitions[systemKey];
+        if (!config) throw new Error(`Dasha system ${systemKey} not supported.`);
+
         const nakInfo = this.getNakshatraInfo(siderealMoonLong);
         
-        // Determine starting Lord
-        // Vimshottari cycles through planets based on Nakshatra index % 9
-        const firstLordIndex = nakInfo.index % 9;
-        const firstLordDuration = config.durations[firstLordIndex];
+        // Logical offset calculation based on system starting Nakshatra
+        let startingNakIndex = (nakInfo.index - config.startNakshatraOffset + 27) % 27;
+        let firstLordIndex = startingNakIndex % config.planets.length;
         
-        // Calculate balance at birth
-        // Time Remaining = (1 - fraction consumed) * total years of the lord
+        const firstLordDuration = config.durations[firstLordIndex];
         const balanceYears = (1 - nakInfo.fractionConsumed) * firstLordDuration;
         const balanceDays = balanceYears * this.SIDEREAL_YEAR;
 
         let currentJD = birthJD;
         const timeline = [];
-
-        // Generate cycles to cover 120 years
         let lordIdx = firstLordIndex;
         let isFirst = true;
 
-        for (let i = 0; i < 9; i++) {
+        // Iterate until projection period is met
+        const endGoalJD = birthJD + (projectionYears * this.SIDEREAL_YEAR);
+
+        while (currentJD < endGoalJD) {
             const lord = config.planets[lordIdx];
             const fullDurationYears = config.durations[lordIdx];
             const actualDurationDays = isFirst ? balanceDays : fullDurationYears * this.SIDEREAL_YEAR;
@@ -189,12 +209,12 @@ class AstronomyEngine {
                 lord: lord,
                 startJD: currentJD,
                 endJD: currentJD + actualDurationDays,
-                antardashas: this._calculateAntardashas(lord, currentJD, actualDurationDays, config)
+                antardashas: this._calculateSubDashas(lord, currentJD, actualDurationDays, config)
             };
 
             timeline.push(mahadasha);
             currentJD += actualDurationDays;
-            lordIdx = (lordIdx + 1) % 9;
+            lordIdx = (lordIdx + 1) % config.planets.length;
             isFirst = false;
         }
 
@@ -203,28 +223,49 @@ class AstronomyEngine {
 
     /**
      * @private
-     * @method _calculateAntardashas
-     * Sub-divides Mahadasha into 9 Antardashas.
+     * @method _calculateSubDashas
+     * Sub-divides dasha periods into Antardashas and Pratyantardashas.
      */
-    _calculateAntardashas(mDashaLord, startJD, totalDays, config) {
+    _calculateSubDashas(mDashaLord, startJD, totalMDDays, config) {
         const mLordIdx = config.planets.indexOf(mDashaLord);
         const ads = [];
-        let currentJD = startJD;
+        let adStartJD = startJD;
 
-        for (let i = 0; i < 9; i++) {
-            const adLordIdx = (mLordIdx + i) % 9;
+        for (let i = 0; i < config.planets.length; i++) {
+            const adLordIdx = (mLordIdx + i) % config.planets.length;
             const adLord = config.planets[adLordIdx];
             const adDurationYears = config.durations[adLordIdx];
             
-            // Antardasha Duration = (MD Duration * AD Duration) / Total Cycle (120)
-            const adDays = (totalDays * adDurationYears) / config.totalCycle;
+            // AD Duration = (MD Duration * AD Years) / Total Cycle Years
+            const adDays = (totalMDDays * adDurationYears) / config.totalCycle;
 
-            ads.push({
+            const antardasha = {
                 lord: adLord,
-                startJD: currentJD,
-                endJD: currentJD + adDays
-            });
-            currentJD += adDays;
+                startJD: adStartJD,
+                endJD: adStartJD + adDays,
+                pratyantardashas: []
+            };
+
+            // Calculate Pratyantardashas
+            let pdStartJD = adStartJD;
+            for (let j = 0; j < config.planets.length; j++) {
+                const pdLordIdx = (adLordIdx + j) % config.planets.length;
+                const pdLord = config.planets[pdLordIdx];
+                const pdDurationYears = config.durations[pdLordIdx];
+                
+                // PD Duration = (AD Duration * PD Years) / Total Cycle Years
+                const pdDays = (adDays * pdDurationYears) / config.totalCycle;
+
+                antardasha.pratyantardashas.push({
+                    lord: pdLord,
+                    startJD: pdStartJD,
+                    endJD: pdStartJD + pdDays
+                });
+                pdStartJD += pdDays;
+            }
+
+            ads.push(antardasha);
+            adStartJD += adDays;
         }
         return ads;
     }
@@ -249,6 +290,7 @@ class AstronomyEngine {
 
 /**
  * UTILITY: JulianConverter
+ * Static methods to convert between Julian Days and Gregorian Date/Time.
  */
 class JulianConverter {
     static toDate(jd) {
@@ -263,7 +305,6 @@ class JulianConverter {
         let month = (e < 14) ? e - 1 : e - 13;
         let year = (month > 2) ? c - 4716 : c - 4715;
         
-        // Convert fractional day to hours, mins, secs
         const dayInt = Math.floor(day);
         const hours = (day - dayInt) * 24;
         const hInt = Math.floor(hours);
@@ -271,7 +312,15 @@ class JulianConverter {
         const mInt = Math.floor(mins);
         const secs = (mins - mInt) * 60;
 
-        return { year, month, day: dayInt, hour: hInt, minute: mInt, second: Math.round(secs) };
+        return { 
+            year, 
+            month, 
+            day: dayInt, 
+            hour: hInt, 
+            minute: mInt, 
+            second: Math.round(secs),
+            iso: `${year}-${String(month).padStart(2, '0')}-${String(dayInt).padStart(2, '0')}`
+        };
     }
 }
 
@@ -284,6 +333,7 @@ const runAstronomyTests = () => {
         console.log("--- Initializing AstronomyEngine Component ---");
         const engine = new AstronomyEngine();
 
+        // Sample: May 15, 1990, 10:30 AM (IST)
         const yr = 1990, mt = 5, dy = 15, hr = 10, min = 30, sec = 0;
         const jd = engine.calculateJulianDay(yr, mt, dy, hr, min, sec, 5.5);
         const tropMoon = engine.getMoonLongitude(jd);
@@ -291,12 +341,20 @@ const runAstronomyTests = () => {
 
         console.log(`Sidereal Moon Longitude: ${siderealMoon.toFixed(4)}°`);
 
-        const vDasha = engine.calculateVimshottariDasha(siderealMoon, jd);
-        
-        console.log("--- Vimshottari Dasha (Mahadashas) ---");
-        vDasha.forEach(md => {
+        // Test Vimshottari
+        const vDasha = engine.calculateDashaTimeline('VIMSHOTTARI', siderealMoon, jd);
+        console.log("--- Vimshottari Dasha Sequence ---");
+        vDasha.slice(0, 3).forEach(md => {
             const start = JulianConverter.toDate(md.startJD);
-            console.log(`${md.lord.padEnd(8)} starts: ${start.year}-${start.month}-${start.day}`);
+            console.log(`Mahadasha: ${md.lord.padEnd(10)} | Starts: ${start.iso}`);
+        });
+
+        // Test Yogini (Conditional/Special)
+        const yDasha = engine.calculateDashaTimeline('YOGINI', siderealMoon, jd);
+        console.log("--- Yogini Dasha Sequence ---");
+        yDasha.slice(0, 5).forEach(md => {
+            const start = JulianConverter.toDate(md.startJD);
+            console.log(`Yogini: ${md.lord.padEnd(15)} | Starts: ${start.iso}`);
         });
 
         console.log("--- AstronomyEngine Verification Complete ---");
